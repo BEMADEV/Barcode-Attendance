@@ -128,7 +128,7 @@ table, tr, td, th, tbody, thead, tfoot {
                 	    , G.Name AS [GroupName]
                 	    , gm.GroupMemberStatus
                 	    , gtr.Name as [Role]
-                	    , P.Id AS [ForBarCode]
+                	    , GM.Id AS [ForBarCode]
                     FROM [Group] G
                 	    LEFT JOIN [GroupLocation] GL ON GL.GroupId = G.Id
                 	    JOIN [GroupMember] GM ON GM.GroupId = G.Id

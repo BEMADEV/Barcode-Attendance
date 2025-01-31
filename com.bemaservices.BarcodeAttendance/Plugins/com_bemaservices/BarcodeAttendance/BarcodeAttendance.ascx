@@ -116,7 +116,7 @@
                                     
                                 </HeaderTemplate>
                                 <ItemTemplate>
-                                    <tr id='<%# "attendeeRow_" + Eval("PersonId") %>'>
+                                    <tr id='<%# "attendeeRow_" + Eval("GroupMemberId") %>'>
                                         <td>
                                             <asp:Label ID="labelAttended" runat="server" Text='<%# Eval("Attended") %>' />
                                         </td>
@@ -124,7 +124,7 @@
                                             <asp:LinkButton ID="linkRemoveAttendance" runat="server" Enabled="false" CssClass="btn btn-danger btn-sm"><i class="fa fa-times"></i></asp:LinkButton>
                                         </td>
                                         <td>
-                                            <asp:Label ID="labelID" runat="server" Text='<%# Eval("PersonId") %>' />
+                                            <asp:Label ID="labelID" runat="server" Text='<%# Eval("GroupMemberId") %>' />
                                         </td>
                                         <td>
                                             <asp:Label ID="labelName" runat="server" Text='<%# Eval("Name") %>' />
@@ -182,22 +182,22 @@
             
 
             if (text != "") {
-                var personId = Number(text);
+                var groupMemberId = Number(text);
 
-                if ( !isNaN( personId ) ) {
+                if ( !isNaN( groupMemberId ) ) {
 
                     //If not already marked attended
-                    if ($('#<%=listMarkedAttendance.ClientID%>').val().indexOf("|" + personId + "|") == -1) {
+                    if ( $( '#<%=listMarkedAttendance.ClientID%>' ).val().indexOf( "|" + groupMemberId + "|") == -1) {
 
                         // Check if attendee person record is available in this list
-                        var $attendeeRow = $("#tableAttendees").find('#attendeeRow_' + personId);
+                        var $attendeeRow = $( "#tableAttendees" ).find( '#attendeeRow_' + groupMemberId );
 
                         //IF Row exists
                         if ($attendeeRow.length) {
                             //Add To the listMarkedAttendance Hidden Field (initial pipe should already be there)
-                            $('#<%=listMarkedAttendance.ClientID%>').val($('#<%=listMarkedAttendance.ClientID%>').val() + personId + "|");
+                            $( '#<%=listMarkedAttendance.ClientID%>' ).val( $( '#<%=listMarkedAttendance.ClientID%>' ).val() + groupMemberId + "|");
 
-                            //Search Through Table For Rows with PersonId and Mark As Attended
+                            //Search Through Table For Rows with groupMemberId and Mark As Attended
 
                             $attendeeRow.find("a[id$=linkRemoveAttendance]").removeClass("aspNetDisabled");
                             $attendeeRow.find("span[id$=labelAttended]").text("-Marked-");
@@ -211,7 +211,7 @@
                         }
                         //ELSE, show popup alert
                         else {
-                            window.alert("No Person Id Matched In Current Group Selection");
+                            window.alert("No Group Member Id Matched In Current Group Selection");
                         }
                         
 
@@ -220,7 +220,7 @@
                 }
                 else {
                     //throw error NaN
-                    console.log("NaN Error: " + personId);
+                    console.log( "NaN Error: " + groupMemberId );
                 }
             }
             
@@ -236,10 +236,10 @@
 
         //Create row click to attendance function 
         $("#tableAttendees").find("tr").click(function () {
-            var personId = $(this).find("span[id$=labelID]").text();
+            var groupMemberId = $(this).find("span[id$=labelID]").text();
 
             //prefill scan text and trigger button
-            $('#<%=tbBarcode.ClientID%>').val(personId);
+            $( '#<%=tbBarcode.ClientID%>' ).val( groupMemberId );
             $('#<%=btnBarcode.ClientID%>').trigger("click");
         });
         
@@ -248,17 +248,17 @@
             //stop tr click event from triggering
             event.stopPropagation();
 
-            var personId = $(this).closest('tr').find("span[id$=labelID]").text();
-            //console.log("PersonId to remove: " + personId);
+            var groupMemberId = $(this).closest('tr').find("span[id$=labelID]").text();
+            //console.log("groupMemberId to remove: " + groupMemberId);
 
             //Remove from the hidden 
-            var newText = $('#<%=listMarkedAttendance.ClientID%>').val().split("|" + personId + "|").join("|");
+            var newText = $( '#<%=listMarkedAttendance.ClientID%>' ).val().split( "|" + groupMemberId + "|").join("|");
             $('#<%=listMarkedAttendance.ClientID%>').val(newText);
             //console.log(newText);
 
             //remove Attended text and disable button
-            $("#tableAttendees").find('#attendeeRow_' + personId).find("a[id$=linkRemoveAttendance]").addClass("aspNetDisabled");
-            $("#tableAttendees").find('#attendeeRow_' + personId).find("span[id$=labelAttended]").text("");
+            $( "#tableAttendees" ).find( '#attendeeRow_' + groupMemberId ).find("a[id$=linkRemoveAttendance]").addClass("aspNetDisabled");
+            $( "#tableAttendees" ).find( '#attendeeRow_' + groupMemberId ).find("span[id$=labelAttended]").text("");
 
             //recalculate header
             var capacityTotal = $("#tableAttendees").find("span[id$=labelAttended]").length;
