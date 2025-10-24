@@ -90,7 +90,7 @@
   <Target Name="CopyFiles" DependsOnTargets="DeleteFiles">
     <ItemGroup>
       <CopyFiles Include="$(OutputPath)com.bemaservices.BarcodeAttendance.dll;" />
-      <BlockCode Include="$(ProjectDir)RockWeb\Plugins\com_bemaservices\BarcodeAttendance\**\*.*" />
+      <BlockCode Include="$(ProjectDir)Plugins\com_bemaservices\BarcodeAttendance\**\*.*" />
       <VersionFile Include="builds\.version" />
     </ItemGroup>
     <MakeDir Directories="$(BuildDir)\tmp" Condition="!Exists('$(BuildDir)\tmp')" />
