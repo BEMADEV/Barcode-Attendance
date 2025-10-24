@@ -1,4 +1,20 @@
-﻿using System;
+﻿// <copyright>
+// Copyright by BEMA Software Services
+//
+// Licensed under the Rock Community License (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.rockrms.com/license
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// </copyright>
+//
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
@@ -25,7 +41,7 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
 {
     [DisplayName( "Barcode Scan Attendance" )]
     [Category( "com_bemaservices > Barcode Attendance" )]
-    [Description( "Scans or Type PersonID to mark Attendance, given Campus, Groups" )]
+    [Description( "Scans or Type GroupMemberId to mark Attendance, given Campus, Groups" )]
 
     [GroupTypesField( "Include Group Types", "The group types to display in the list.  If none are selected, all group types will be included.", false, "", "", 1 )]
     [BooleanField( "Limit Groups By Group Schedule", "Limit returned groups by those with a location/schedule that matches the schedule selector", false, "", 2 )]
@@ -39,33 +55,26 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
         #region Private Variables
         private RockContext _rockContext = null;
         private int _groupTypeId = 0;
-
         #endregion
 
         #region Public Properties
-
-
 
         private List<AttendanceGridRow> GroupMembersList
         {
             get; set;
         }
 
-        // Previous Attendance from database, Key is AttendanceId, Value is the PersonId
-
+        // Previous Attendance from database, Value is the GroupMemberIds
         private List<int> AttendanceList
         {
             get; set;
         }
 
-        //List of PersonIds that need to be marked as attended when committing 
+        //List of GroupMemberIds that need to be marked as attended when committing 
         private List<int> MarkedAttendanceList
         {
             get; set;
         }
-
-
-
 
         #endregion
 
@@ -74,8 +83,6 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
         protected override void LoadViewState( object savedState )
         {
             base.LoadViewState( savedState );
-
-
 
             // NOTE: These things are converted to JSON prior to going into ViewState, so the json variable could be null or the string "null"!
             string json = ViewState["GroupMembersList"] as string;
@@ -107,9 +114,6 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
             {
                 MarkedAttendanceList = JsonConvert.DeserializeObject<List<int>>( json );
             }
-
-
-
         }
 
         /// <summary>
@@ -120,12 +124,9 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
         {
             base.OnInit( e );
 
-
-
             this.BlockUpdated += Block_BlockUpdated;
 
             this.AddConfigurationUpdateTrigger( pnlContent );
-
 
             //Set Defaults for ViewState Properties
             GroupMembersList = new List<AttendanceGridRow>();
@@ -134,12 +135,9 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
 
             //clear the hidden field values (resets to single pipe)
             listMarkedAttendance.Value = "|";
-            //
 
             EnableFilters();
         }
-
-
 
         /// <summary>
         /// Raises the <see cref="E:System.Web.UI.Control.Load" /> event.
@@ -151,8 +149,6 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
 
             //Set Totals after ViewState saves to properties
             SetAttendanceTotals();
-
-
         }
 
         protected override object SaveViewState()
@@ -167,7 +163,6 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
             ViewState["AttendanceList"] = JsonConvert.SerializeObject( AttendanceList, Formatting.None, jsonSetting );
             ViewState["MarkedAttendanceList"] = JsonConvert.SerializeObject( MarkedAttendanceList, Formatting.None, jsonSetting );
 
-
             return base.SaveViewState();
         }
 
@@ -175,12 +170,10 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
 
         #region Events
 
-
         protected void Block_BlockUpdated( object sender, EventArgs e )
         {
             NavigateToCurrentPageReference();
         }
-
 
         /// <summary>
         /// Handles the Click event of the lbSave control.
@@ -197,20 +190,19 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
 
             int? scheduleId = bddlServiceTime.SelectedValueAsInt();
             int? campusId = bddlCampus.SelectedValueAsInt();
-
             List<int> locationIds = rlb_Rooms.SelectedValuesAsInt;
+
             //User commits marked attendance. Save marked attendance data to database. Refresh and Re-enable group filters.
             var attendanceService = new AttendanceService( _rockContext );
 
-
-            // from PersonId and groups listed, create attendance
-            foreach ( int personId in MarkedAttendanceList )
+            // from GroupMemberId and groups listed, create attendance
+            foreach ( int groupMemberId in MarkedAttendanceList )
             {
                 //var personQry = new PersonService( _rockContext );
                 var note = "Barcode Scanned: " + RockDateTime.Now.ToShortDateTimeString() + " By User: " + CurrentPerson.FullName;
 
                 //Find groups and Ids from GroupMemberList, cycle through matching and add attendance (usually only one)
-                foreach ( AttendanceGridRow row in GroupMembersList.Where( t => t.PersonId == personId ).ToList() )
+                foreach ( AttendanceGridRow row in GroupMembersList.Where( t => t.GroupMemberId == groupMemberId ).ToList() )
                 {
                     var groupLocationQry = new GroupLocationService( _rockContext ).Queryable().AsNoTracking();
                     var groupLocation = groupLocationQry.Where( t => t.GroupId == row.GroupId ).FirstOrDefault();
@@ -224,7 +216,6 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
                             row.GroupId, locationId, scheduleId, campusId );
                     attendanceRecord.Note = note;
                 }
-
             }
 
             //Save Attendance to Database
@@ -259,10 +250,8 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
             EnableFilters();
         }
 
-
         protected void bddlCampus_Changed( object sender, EventArgs e )
         {
-
             //Remove Service Times and other Selections
             bddlServiceTime.ClearSelection();
             rlb_Rooms.ClearSelection();
@@ -292,7 +281,6 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
         protected void cblAreas_Changed( object sender, EventArgs e )
         {
             BindGroupLocations();
-
         }
 
         protected void cblRooms_Changed( object sender, EventArgs e )
@@ -300,10 +288,6 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
             // Once Rooms are selected, populate the attendance grid
             BindAttendanceGrid();
         }
-
-
-
-
 
         /// <summary>
         /// Binds this event to each row of the grid to populate attendance data and enable a delete attendance button.
@@ -319,21 +303,18 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
                 var lAttended = e.Row.FindControl( "lAttended" ) as Literal;
                 BootstrapButton aRemoveAttendance = e.Row.FindControl( "aRemoveAttendance" ) as BootstrapButton;
 
-
-
                 //Find Attendance DateTime if scanned
-                var personId = gridRow.PersonId;
+                var groupMemberId = gridRow.GroupMemberId;
 
-                if ( MarkedAttendanceList.Contains( gridRow.PersonId ) )
+                if ( MarkedAttendanceList.Contains( gridRow.GroupMemberId ) )
                 {
                     //Fill in time from marked attendance list
                     lAttended.Text = "-MARKED-";
 
                     // Also enable delete button on row, so we can remove marked attendance if necessary
-
                     aRemoveAttendance.Visible = true;
                 }
-                else if ( AttendanceList.Contains( gridRow.PersonId ) )
+                else if ( AttendanceList.Contains( gridRow.GroupMemberId ) )
                 {
                     //If existing attendance exists in the database, show that date instead
                     //lDateTimeIn.Text = checkInTime.First().ToShortDateTimeString();
@@ -341,23 +322,14 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
 
                     // Disable Delete Button (won't delete set-in-stone attendance)
                     aRemoveAttendance.Visible = false;
-
-
                 }
                 else
                 {
                     // Disable Delete Button 
                     aRemoveAttendance.Visible = false;
                 }
-
-
-
             }
-
-
-
         }
-
 
         protected void bddlChildGroup_Changed( object sender, EventArgs e )
         {
@@ -395,7 +367,6 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
             BindDateAndTimes();
         }
 
-
         #endregion
 
         #region Internal Methods
@@ -429,7 +400,6 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
             BindServiceTimes();
             BindGroupLocations();
             BindDateAndTimes();
-
         }
 
         /// <summary>
@@ -443,7 +413,6 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
             SetAttendanceTotals();
 
             //Enable Gridview
-
             tableAttendees.Visible = true;
 
             //enable barcode scan text field
@@ -464,7 +433,6 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
         {
             //fill in attendance count and capacity
             nbCapacity.Title = string.Format( "<font size='30'>{0}/{1}</font><br />", AttendanceList.Count() + MarkedAttendanceList.Count(), GroupMembersList.ToList().Count() );
-
         }
 
         private void BindGroupTypes()
@@ -478,12 +446,10 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
                 bddlGroupType.Visible = true;
             }
 
-
             bddlGroupType.DataSource = qry.ToList();
             bddlGroupType.DataBind();
 
             GetGroupTypes( _rockContext );
-
         }
 
         private void BindCampuses()
@@ -491,7 +457,6 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
             bddlCampus.DataSource = CampusCache.All();
             bddlCampus.DataBind();
             bddlCampus.Items.Insert( 0, new ListItem( " ", "" ) );
-
         }
 
         private void BindDateAndTimes()
@@ -508,14 +473,11 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
                 {
                     datepServiceDate.SelectedDate = RockDateTime.Today.SundayDate().AddDays( -7 );
                 }
-
             }
-
         }
 
         private void BindServiceTimes()
         {
-
             var scheduleGroups = new GroupService( _rockContext ).GetByGroupTypeId( _groupTypeId )
                 .Where( g => g.IsActive == true && g.IsArchived != true );
 
@@ -536,7 +498,6 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
             bddlServiceTime.DataSource = schedules.ToList().Distinct().OrderBy( s => s.WeeklyTimeOfDay ).Select( s => new { Name = s.Name ?? s.FriendlyScheduleText, Id = s.Id } ).ToList();
             bddlServiceTime.DataBind();
             bddlServiceTime.Items.Insert( 0, new ListItem( " ", "" ) );
-
         }
 
         private void BindParentGroups()
@@ -554,7 +515,6 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
             bddlParentGroup.DataBind();
             bddlParentGroup.Items.Insert( 0, new ListItem( " ", "" ) );
         }
-
 
         /// <summary>Binds the group locations to the Rooms dropdown.</summary>
         private void BindGroupLocations()
@@ -593,8 +553,6 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
 
                 //filter selectQry with groups only included in the groupsWithSelectedSchedule
                 selectQry = selectQry.Where( t => groupsWithSelectedSchedule.Contains( t.Id ) );
-
-
             }
 
             var selectedGroupLocationIds = selectQry.SelectMany( t => t.GroupLocations ).Select( s => s.Id ).ToList();
@@ -602,17 +560,15 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
             var locationQry = new GroupLocationService( _rockContext ).Queryable( "Location" );
 
             //get Group Locations and send
-
             List<Location> locationList = new List<Location>();
+
             //Add 'Select All' with an id of 0, caught later to select all
             locationList.Add( new Location { Id = 0, Name = "Select All", } );
             locationList.AddRange( locationQry.Where( t => selectedGroupLocationIds.Contains( t.Id ) ).Select( s => s.Location ).DistinctBy( r => r.Id ).OrderBy( t => t.Name ).ToList() );
 
             rlb_Rooms.DataSource = locationList.Select( l => new { Name = l.Name ?? l.FormattedAddress, Id = l.Id } );
             rlb_Rooms.DataBind();
-
         }
-
 
         /// <summary>Takes Groups from the Locations filter OR the single selected group and populates the attendance grid</summary>
         private void BindAttendanceGrid()
@@ -680,7 +636,7 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
 
 
                 //Add attendance count to AttendanceList in ViewState
-                AttendanceList = attendance.Select( a => a.PersonAlias.PersonId ).ToList();
+                AttendanceList = attendance.SelectMany( a => a.Occurrence.Group.Members.Where(gm=> gm.PersonId == a.PersonAlias.PersonId).Select(gm=> gm.Id) ).ToList();
 
                 //Add attendanceList to hidden field
                 //Should eval to a single pipe if nothing, joined PersonIds seperated by pipes if any EX: |1234|5432|23445|
@@ -706,24 +662,20 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
                     groupMembers = groupMembers.OrderBy( g => g.GroupRole.IsLeader ).ThenBy( g => g.Person.LastName ).ThenBy( g => g.Person.NickName );
                 }
 
-
-
                 //Attach qry list to viewstate list
-                GroupMembersList = groupMembers.Select( g => new AttendanceGridRow()
+                GroupMembersList = groupMembers.Select( gm => new AttendanceGridRow()
                 {
-                    Id = g.Id,
-                    PersonId = g.PersonId,
-                    PersonAliasId = g.Person.Aliases.FirstOrDefault().Id,
-                    Name = g.Person.NickName + " " + g.Person.LastName,
-                    GroupId = g.GroupId,
-                    GroupName = g.Group.Name,
-                    Attended = AttendanceList.Contains( g.PersonId ) ? "Attended" : ""
+                    GroupMemberId = gm.Id,
+                    PersonId = gm.PersonId,
+                    PersonAliasId = gm.Person.Aliases.FirstOrDefault().Id,
+                    Name = gm.Person.NickName + " " + gm.Person.LastName,
+                    GroupId = gm.GroupId,
+                    GroupName = gm.Group.Name,
+                    Attended = AttendanceList.Contains( gm.Id ) ? "Attended" : ""
                 } ).ToList();
 
                 //Attach DataSource to Grid
                 AttachGrid();
-
-
             }
 
             //Show the attendance grid and disable filters
@@ -775,7 +727,7 @@ namespace RockWeb.Plugins.com_bemaservices.BarcodeAttendance
         private class AttendanceGridRow
         {
             //GroupMemberId
-            public int Id
+            public int GroupMemberId
             {
                 get; set;
             }
